@@ -16,8 +16,10 @@ bool DrvMemLoader::InitDrv(PUCHAR Data, ULONG64 Size)
         return false;
     }
 
-    ULONG64 imageSize = pNt->OptionalHeader.SizeOfImage;
+    m_bufferSize = Size;
 
+    ULONG64 imageSize = pNt->OptionalHeader.SizeOfImage;
+    
     m_imageBuffer = static_cast<PUCHAR>(ExAllocatePool(NonPagedPool, imageSize));
 
     memset(m_imageBuffer, 0, imageSize);
@@ -41,41 +43,9 @@ bool DrvMemLoader::InitDrv(PUCHAR Data, ULONG64 Size)
     return true;
 }
 
-void DrvMemLoader::FixReloc()
+void DrvMemLoader::FixImageBase()
 {
-    if (m_imageBuffer == nullptr)
-    {
-        return;
-    }
-
-    typedef struct {
-        UINT32 Offset : 12;
-        UINT32 Type : 4;
-    }RELOC_BLOCK, * PRELOC_BLOCK;
-
-    PIMAGE_DATA_DIRECTORY pDir = &m_pNt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC];
-    PIMAGE_BASE_RELOCATION pReloc = reinterpret_cast<PIMAGE_BASE_RELOCATION>(m_imageBuffer + pDir->VirtualAddress);
-
-    while (pReloc->VirtualAddress && pReloc->SizeOfBlock)
-    {
-
-        PRELOC_BLOCK blocks = reinterpret_cast<PRELOC_BLOCK>(m_imageBuffer + pReloc->VirtualAddress + sizeof(IMAGE_BASE_RELOCATION));
-
-        UINT64 relocNum = (pReloc->SizeOfBlock - sizeof(IMAGE_BASE_RELOCATION)) / sizeof(RELOC_BLOCK);
-
-        for (size_t i = 0; i < relocNum; i++)
-        {
-            if (blocks[i].Type == IMAGE_REL_BASED_DIR64)
-            {
-                PINT64 address = reinterpret_cast<PINT64>(m_imageBuffer + pReloc->VirtualAddress + blocks[i].Offset);
-                *address = reinterpret_cast<INT64>(m_imageBuffer + (*address - m_pNt->OptionalHeader.ImageBase));
-            }
-        }
-
-        pReloc = reinterpret_cast<PIMAGE_BASE_RELOCATION>(m_imageBuffer + pReloc->SizeOfBlock);
-    }
-    
-
+    m_pNt->OptionalHeader.ImageBase = reinterpret_cast<ULONG64>(m_imageBuffer);
 }
 
 void DrvMemLoader::FixIAT()
@@ -156,6 +126,9 @@ bool DrvMemLoader::CallEntryPoint(bool clear)
 
     DriverEntry_t entrypoint = 
         reinterpret_cast<DriverEntry_t>(m_imageBuffer + m_pNt->OptionalHeader.AddressOfEntryPoint);
+
+
+    
 
     NTSTATUS status = entrypoint(nullptr, nullptr);
 

@@ -19,6 +19,8 @@ public:
 
     bool InitDrv(PUCHAR Data, ULONG64 Size);
 
+    void FixImageBase();
+
     void FixReloc();
 
     void FixIAT();
@@ -27,9 +29,14 @@ public:
 
     bool CallEntryPoint(bool clear = true);
 
+    PUCHAR GetImageBuffer()
+    {
+        return m_imageBuffer;
+    }
+
 private:
     PUCHAR m_imageBuffer;
     PIMAGE_DOS_HEADER m_pDos;
     PIMAGE_NT_HEADERS m_pNt;
-
+    size_t m_bufferSize;
 };
